@@ -10,7 +10,7 @@
   A&D標準フォーマットの数値部分を出力する。
   機器送信例：ST,+00012.78  gCrLf
   HID出力例：12.78CrLf  マイナスの場合は先頭に'-'をつける。
-  
+
   Seeeduino XINO USB HID
   ハードウェアシリアル
   UART0 USB
@@ -37,7 +37,7 @@
 #define BPS0 9600                 // bps UART0(USB)
 #define BPS1 9600                 // bps UART1
 #define BAFFSIZE 5                // 連続で受信する場合の文字列のバッファ数
-#define DATASIZE 80               // 一度に送る文字列のバイト数
+#define DATASIZE 30               // 一度に送る文字列のバイト数
 
 char baffArr[BAFFSIZE][DATASIZE]; // バッファ
 int ReadX = 0;
@@ -45,20 +45,70 @@ int ReadY = 0;
 int WriteX = 0;
 int WriteY = 0;
 
-#define INTERVAL 900   // 最小送信間隔ms(アプリの入力速度に合わせて変更する)
+#define INTERVAL 800   // 最小送信間隔ms(アプリの入力速度に合わせて変更する)
 int count = 0;
-String strDATA = "";   // 送信する文字列
+
+String strDATA;                 // 送信する文字列
+
+
+/***************************************************************
+   A&D標準フォーマットから値を切り出して送信する
+ **************************************************************/
+int AandDFormatSend() {
+  // A&D標準フォーマットから値部分のデータを切り出してデータ送信
+
+  // A&Dフォーマットデータでない場合は実行しない。
+  if (strDATA.length() != 15) {
+    Serial.println("string length Error");
+    return 0;
+  }
+
+  //測定不能または不安定のデータ出ない場合は送信しない。
+  if (strDATA.charAt(0) != 'S') {
+    Serial.println("overload Err");
+    return 0;
+  }
+
+  int i = 4;
+  do {
+
+    if (strDATA.charAt(i) != '0') {
+      break; //数値がゼロ以外になったら抜ける
+    }
+
+    i++;
+  } while (i >= 8);
+
+  //HIDでデータをPCに送信マイナスの場合は'-'を送信
+  if (strDATA.charAt(3) == '-') {
+    Keyboard.print('-');
+    Keyboard.println(strDATA.substring(i, 11));   // 数値データ送信
+
+  }
+  else if (strDATA.charAt(3) == '+') {
+    Keyboard.println(strDATA.substring(i, 11));   // 数値データ送信
+
+  }
+  else {
+    Keyboard.println("Data Format Error");
+  }
+
+}
+
 
 /***************************************************************
    初期化
  **************************************************************/
 void setup() {
   strDATA.reserve(DATASIZE); // strDATAの文字列の格納領域をbyte数確保
+
   Keyboard.begin();          // USB HID接続開始
   Serial.begin(BPS0);        // UART0
   Serial1.begin(BPS1);       // UART1
-  delay(500);
+  delay(100);
+
   //Keyboard.println("USB HID Start!!");
+
 }
 
 /***************************************************************
@@ -82,6 +132,9 @@ void loop() {
   //書き出し
   if (INTERVAL <= count) {
     if (ReadX != WriteX) {             //データが保存されている場合に実行
+
+      strDATA = "";
+
       for (WriteY = 0; WriteY < DATASIZE; WriteY++) {
         if (baffArr[WriteX][WriteY] != '\0') {
           strDATA += baffArr[WriteX][WriteY];
@@ -91,33 +144,15 @@ void loop() {
         }
       }
 
-      if (strDATA.length() > 1) {
-        //安定時のみ'ST'
-        if (strDATA.charAt(0) == 'S') {
+      if (strDATA.length() == 15) {
+        //          Keyboard.println(strDATA);
 
-          //マイナスの場合は入力
-          if (strDATA.charAt(3) == '-') {
-            Keyboard.print('-');     // '-' データ送信
-          }
-
-          int i;
-          i = 4;
-          do {
-
-            if (strDATA.charAt(i) != '0') {
-              break; //数値がゼロ以外になったら抜ける
-            }
-
-            i++;
-          } while (i >= 8);
-
-          Keyboard.println(strDATA.substring(i, 11));     // 数値データ送信
-        }
+        AandDFormatSend(); //A&D標準フォーマットから値部分のデータを切り出してデータ送信
+        strDATA = "";
       }
     }
 
     // データ初期化
-    strDATA = "";
     WriteX += 1;
     WriteX = WriteX % BAFFSIZE;
   }

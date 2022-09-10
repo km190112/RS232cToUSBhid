@@ -11,8 +11,9 @@
 */
 #include <Keyboard.h>
 
-// #define bps0 115200  //シリアル送信側UART0(USB)
-#define bps1 9600    //シリアル受信側UART1
+// #define BPS0 115200  //シリアル送信側UART0(USB)
+#define BPS1 9600  //シリアル受信側UART1
+#define DATA_BUFFER 32
 
 String strDATA = "";  //送信用データ
 
@@ -47,11 +48,11 @@ void AandDFormatSend() {
  **********************************************************************/
 void setup() {
   Keyboard.begin();
-  // Serial.begin(bps0);   // 通信速度bps、UART0
-  Serial1.begin(bps1);  // 通信速度bps、UART1
+  // Serial.begin(BPS0);   // 通信速度bps、UART0
+  Serial1.begin(BPS1);  // 通信速度bps、UART1
   delay(50);
 
-  strDATA.reserve(32);  // 文字列の格納領域を指定バイト数確保
+  strDATA.reserve(DATA_BUFFER);  // 文字列の格納領域を指定バイト数確保
 }
 
 /***********************************************************************

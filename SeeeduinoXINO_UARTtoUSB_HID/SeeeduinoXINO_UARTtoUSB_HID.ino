@@ -1,8 +1,9 @@
 /*
-  Seeeduino XINO USB HID
-  ハードウェアシリアル
-  UART0 USB
-  UART1（RX：GPIO7、TX：GPIO6）機器側TXのみ使用
+  接続：Seeedino XINO
+  ハードウェアシリアル 
+  UART1（RX：GPIO7、TX：GPIO6）
+  RX：GPIO7 -- TX
+  TX：GPIO6 -- RX
 
   ライブラリ(adafruit/Adafruit_TinyUSB_Arduino)
   https://github.com/adafruit/Adafruit_TinyUSB_Arduino
@@ -10,7 +11,6 @@
   機器側設定
   ボーレート：9600
   ビット長：8ビット、パリティ：なし、ストップビット：なし(SERIAL_8N1)
-
   非同期シリアル通信(UART)で受信したデータをUSBでデータ送信。
   USB HIDデバイスとして動かすことが出来る。
 
@@ -28,19 +28,17 @@ int ReadY = 0;
 int WriteX = 0;
 int WriteY = 0;
 
-#define INTERVAL 900   // 最小送信間隔ms(アプリの入力速度に合わせて変更する)
+#define INTERVAL 800   // 最小送信間隔ms(アプリの入力速度に合わせて変更する)
 int count = 0;
-String strDATA = "";   // 送信する文字列
 
 /***************************************************************
    初期化
  **************************************************************/
 void setup() {
-  strDATA.reserve(DATASIZE); // strDATAの文字列の格納領域をbyte数確保
   Keyboard.begin();          // USB HID接続開始
   Serial.begin(BPS0);        // UART0
   Serial1.begin(BPS1);       // UART1
-  delay(500);
+  delay(50);
   //Keyboard.println("USB HID Start!!");
 }
 
@@ -56,7 +54,7 @@ void loop() {
       ReadX += 1;
       ReadX = ReadX % BAFFSIZE;
       ReadY = 0;
-    } else if (inChar != '\r') {        // CRの改行コードの場合は結合しない
+    } else if (inChar != '\r') {       // CRの改行コードの場合は結合しない
       baffArr[ReadX][ReadY] = inChar;  // 読み込んだデータを結合
       ReadY += 1;
     }
@@ -67,16 +65,13 @@ void loop() {
     if (ReadX != WriteX) {             //データが保存されている場合に実行
       for (WriteY = 0; WriteY < DATASIZE; WriteY++) {
         if (baffArr[WriteX][WriteY] != '\0') {
-          strDATA += baffArr[WriteX][WriteY];
+          Serial.print(baffArr[WriteX][WriteY]);
           baffArr[WriteX][WriteY] = '\0';
         } else {
           break;
         }
       }
-      if (strDATA.length() > 1) {
-        Keyboard.println(strDATA);     // データ送信
-      }
-      strDATA = "";                    // データ初期化
+
       WriteX += 1;
       WriteX = WriteX % BAFFSIZE;
     }

@@ -1,8 +1,9 @@
 /*
   RS323C to TTLコンバータと接続し、設備から出力した信号をPCにHID入力する。
-  連続で改行コードを出力するような機器との接続する場合HIDの出力速度より入力速度を上回る。
-  ハードウェアシリアル64byteを超える可能性があため、一旦char型の２次元配列に格納し、
-  のバッファ溢れを防止する。
+  連続で多くのデータを出力するような機器との接続する場合HIDの出力速度より入力速度を上回るため、
+  改行コードごとにdelay処理を加えている。
+  またマイコンのハードウェアシリアルのバッファが64byteを超える可能性があため、
+  一旦char型の２次元配列に改行コードごとに格納し、バッファ溢れを防止する。
 
   接続：Seeedino XINO
   ハードウェアシリアル 
@@ -22,7 +23,7 @@
 
 #define BPS0 9600                 // bps UART0(USB)test用
 #define BPS1 9600                 // bps UART1
-#define BAFFSIZE 150              // 連続で受信する場合の文字列のバッファ数
+#define BAFFSIZE 130              // 連続で受信する場合の文字列のバッファ数
 #define DATASIZE 80               // 一度に送る文字列のバイト数のヴバッファ数
 
 char baffArr[BAFFSIZE][DATASIZE]; // バッファ
@@ -38,13 +39,13 @@ int count = 0;
    初期化
  **************************************************************/
 void setup() {
-  strDATA.reserve(DATASIZE); // strDATAの文字列の格納領域をbyte数確保
   Keyboard.begin();          // USB HID接続開始
   // Serial.begin(BPS0);        // UART0
   Serial1.begin(BPS1);       // UART1
   delay(50);
   //Keyboard.println("USB HID Start!!");
 }
+
 
 /***************************************************************
   1バイトづつSerialで読み込み、baffArrに一旦格納する。strDATAに結合してUSB HIDで送信
@@ -53,14 +54,23 @@ void loop() {
   //読み込み
   while (Serial1.available() > 0) {     // 受信したデータバッファが1バイト以上存在する場合
     char inChar = (char)Serial1.read(); // Serial1からデータ読み込み
-    if (inChar == '\n') {               // 改行コード(LF)がある場合の処理
+    if (inChar == '\n') {               // 改行(LF:0x0a)がある場合の処理
       baffArr[ReadX][ReadY] = '\0';
       ReadX += 1;
       ReadX = ReadX % BAFFSIZE;
       ReadY = 0;
-    } else if (inChar != '\r') {        // CRの改行コードの場合は結合しない
+
+    } else if (inChar != '\r') {       // 復帰(CR:0x0d)の場合は結合しない
+      
       baffArr[ReadX][ReadY] = inChar;  // 読み込んだデータを結合
       ReadY += 1;
+    }
+
+    if(ReadY >= DATASIZE){
+      for (WriteY = 0; WriteY < DATASIZE; WriteY++) {
+        baffArr[WriteX][WriteY] = '\0';
+        ReadY = 0;
+      }
     }
   }
 
@@ -70,13 +80,12 @@ void loop() {
 
       for (WriteY = 0; WriteY < DATASIZE; WriteY++) {
         if (baffArr[WriteX][WriteY] != '\0') {
-          Keyboard.println(baffArr[WriteX][WriteY]);     // データ送信
+          Keyboard.println(baffArr[WriteX][WriteY]);  // データ送信
           baffArr[WriteX][WriteY] = '\0';
         } else {
           break;
         }
       }
-      
       WriteX += 1;
       WriteX = WriteX % BAFFSIZE;
     }

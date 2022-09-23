@@ -24,7 +24,7 @@
 #define BPS0 9600                 // bps UART0(USB)test用
 #define BPS1 9600                 // bps UART1
 #define BAFFSIZE 130              // 連続で受信する場合の文字列のバッファ数
-#define DATASIZE 80               // 一度に送る文字列のバイト数のヴバッファ数
+#define DATASIZE 80               // 一度に送る文字列のバイト数のバッファ数
 
 char baffArr[BAFFSIZE][DATASIZE]; // バッファ
 int ReadX = 0;

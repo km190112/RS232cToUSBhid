@@ -29,7 +29,7 @@
 #define DATA_BUFFER 17  // 文字列の格納領域のバイト数
 
 char resDATA[DATA_BUFFER];  //送信用データ
-uint pData = 0;
+uint8_t pData = 0;
 
 
 void AandDFormatSend() {
@@ -37,24 +37,24 @@ void AandDFormatSend() {
   // データ例：ST,+00012.78  gCrLf
   //CrLfはresDATA格納時に除いている。
 
-  //HIDでデータをPCに送信マイナスの場合は'-'を送信
+  //HIDでデータをPCに送信マイナスの場合は'-'(0x2d)を送信
   if (resDATA[3] == '-') {
     // Serial.print('-');
     Keyboard.print('-');
-  } else if (resDATA[3] != '+') {  //フォーマットエラー
+  } else if (resDATA[3] != '+') {  // '+'(0x2b)フォーマットエラー
     // Serial.println("Data Format Error");
     return;
   }
 
-  uint pPass = 4;
+  uint8_t pPass = 4;
   do {
-    if (resDATA[pPass] != '0') {
+    if (resDATA[pPass] != '0') { // 重量値の上位'0'(0x30)埋め値は送信しない
       break;  //数値がゼロ以外になったら抜ける
     }
     pPass++;
   } while (pPass < 8);
 
-  for (uint pSend = pPass; pSend <= 12; pSend++) {
+  for (uint8_t pSend = pPass; pSend <= 12; pSend++) {
     // Serial.print(resDATA[pSend]);
     Keyboard.print(resDATA[pSend]);
   }
@@ -91,7 +91,7 @@ void setup() {
 
 /***********************************************************************
   UART1から受信シリアル受信
-  1バイトづつ読み込みstrDATAに結合してUSB HID送信
+  1バイトづつ読み込みstrDATAに結合しUSB HID送信
    **********************************************************************/
 void loop() {
   while (Serial1.available() > 0) {  // 受信したデータバッファが1バイト以上存在する場合
@@ -101,7 +101,7 @@ void loop() {
     if (inChar == '\n') {  // 改行(LF:0x0a)がある場合の処理
       for (uint i = 0; i < pData; i++) {
         // Serial.print(resDATA[i]);
-        // Keyboard.println(resDATA[i]);
+        // Keyboard.print(resDATA[i]);
       }
       // Serial.println("");
       // Keyboard.println("");

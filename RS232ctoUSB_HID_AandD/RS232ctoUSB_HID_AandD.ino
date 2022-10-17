@@ -35,31 +35,33 @@ uint8_t pData = 0;
 void AandDFormatSend() {
   // A&D標準フォーマットから値部分のデータを切り出してデータ送信
   // データ例：ST,+00012.78  gCrLf
-  //CrLfはresDATA格納時に除いている。
+
+  if (resDATA[0] != 'S') {
+    return;  // 安定状態"ST"以外の場合は送信しない。
+  }
 
   //HIDでデータをPCに送信マイナスの場合は'-'(0x2d)を送信
   if (resDATA[3] == '-') {
-    // Serial.print('-');
     Keyboard.print('-');
-  } else if (resDATA[3] != '+') {  // '+'(0x2b)フォーマットエラー
+  } else if (resDATA[3] == '+') {  // '+'(0x2b)フォーマットエラー
+    //'+'は送信しない。
+  } else {
     // Serial.println("Data Format Error");
     return;
   }
 
   uint8_t pPass = 4;
   do {
-    if (resDATA[pPass] != '0') { // 重量値の上位'0'(0x30)埋め値は送信しない
-      break;  //数値がゼロ以外になったら抜ける
+    if (resDATA[pPass] != '0') {  // 重量値の上位'0'(0x30)埋め値は送信しない
+      break;                      //数値がゼロ以外になったら抜ける
     }
     pPass++;
   } while (pPass < 8);
 
   for (uint8_t pSend = pPass; pSend <= 12; pSend++) {
-    // Serial.print(resDATA[pSend]);
     Keyboard.print(resDATA[pSend]);
   }
 
-  // Serial.println("");
   Keyboard.println("");
 
   return;
@@ -92,24 +94,24 @@ void setup() {
 /***********************************************************************
   UART1から受信シリアル受信
   1バイトづつ読み込みstrDATAに結合しUSB HID送信
-   **********************************************************************/
+  **********************************************************************/
 void loop() {
   while (Serial1.available() > 0) {  // 受信したデータバッファが1バイト以上存在する場合
 
     char inChar = (char)Serial1.read();  // シリアル1からデータ読み込み
 
     if (inChar == '\n') {  // 改行(LF:0x0a)がある場合の処理
-      for (uint i = 0; i < pData; i++) {
-        // Serial.print(resDATA[i]);
-        // Keyboard.print(resDATA[i]);
-      }
+      // for (uint i = 0; i < pData; i++) {
+      //   Serial.print(resDATA[i]);
+      //   Keyboard.print(resDATA[i]);
+      // }
       // Serial.println("");
       // Keyboard.println("");
 
       AandDFormatSend();
       bufferReset();
 
-    } else if (inChar != '\r') {  // 復帰(CR:0x0d)の場合は結合しない
+    } else if (inChar != '\r') {  // 復帰(CR:0x0d)の以外の場合はchar配列に格納
 
       if (pData < DATA_BUFFER) {
         resDATA[pData] = inChar;

@@ -47,7 +47,7 @@ void loop() {
       Serial.println(inChar);
       Keyboard.println(inChar);
       
-    } else if (inChar != '\r') {  // 復帰(CR:0x0d)の場合は結合しない
+    } else if (inChar != '\r') {  // 復帰(CR:0x0d)の場合は送信しない
       Serial.print(inChar);
       Keyboard.print(inChar);
       
